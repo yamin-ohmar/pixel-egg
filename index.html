@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Pixel Egg</title>
+    <style>
+        /* Include borders and padding in element sizes. */
+        * {
+            box-sizing: border-box;
+        }
+      
+        /* Centre the game vertically and horizontally. */
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #f6efdf;
+            color: #40382f;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+      
+        /* Keep the title close to the introduction. */
+        h1 {
+            margin: 0 0 8px;
+            font-size: 32px;
+        }
+      
+        /* Give the text some breathing room. */
+        p {
+            margin: 12px 0 20px;
+            line-height: 1.5;
+        }
+      
+        /* Enlarge the drawing while keeping its pixel edges sharp. */
+        canvas {
+            display: block;
+            width: 480px;
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+            background: #eadfc8;
+            border: 4px solid #40382f;
+            image-rendering: pixelated;
+        }
+
+        /* Arrange the buttons in a row with space between them. */
+        .controls {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        /* Give buttons a chunky border and a small solid shadow. */
+        button {
+            padding: 12px 20px;
+            border: 3px solid #40382f;
+            border-radius: 6px;
+            background: #f3bd38;
+            color: #40382f;
+            font: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #40382f;
+        }
+
+        /* Brighten an available button when the mouse is over it. */
+        button:hover:not(:disabled) {
+            background: #ffd567;
+        }
+
+        /* Move the button down when pressed. */
+        button:active:not(:disabled) {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        /* Make unavailable buttons look quieter. */
+        button:disabled {
+            background: #ded7c9;
+            color: #938b7e;
+            border-color: #aaa191;
+            box-shadow: 0 4px 0 #aaa191;
+            cursor: not-allowed;
+        }
+    </style>
+  </head>
+  <body>
+    <h1>Pixel Egg 🍳</h1>
+    <p>Let’s cook breakfast.</p>
+
+    <canvas id="game" width="320" height="240"></canvas>
+
+    <!-- Keep both game buttons together in one row. -->
+    <div class="controls">
+        <!-- Click this button to put an egg in the pan. -->
+        <button id="crack-egg">Cook egg</button>
+
+        <!-- Keep serving unavailable until the egg is ready. -->
+        <button id="serve-egg" disabled>Serve egg</button>
+    </div>
+
+    <!-- Show the player what is happening. -->
+    <p id="status">Ready to cook.</p>
+
+    <script>
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+
+        // Show one countdown number above the pan.
+        function drawCountdown(number) {
+            // Clear the previous number.
+            ctx.clearRect(135, 35, 50, 35);
+
+            // Draw the new number.
+            ctx.fillStyle = "#40382f";
+            ctx.font = "bold 24px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText(number, 160, 62);
+        }
+      
+        // Draw a pan for cooking
+        function drawPan() {
+            ctx.fillStyle = "#40382f";
+            ctx.fillRect(100, 80, 100, 70);
+
+            // Draw the handle on the right side of the pan.
+            ctx.fillStyle = "#40382f";
+            ctx.fillRect(200, 105, 55, 20);
+
+            // Draw a lighter cooking surface inside the pan.
+            ctx.fillStyle = "#68615a";
+            ctx.fillRect(108, 88, 84, 54);
+        }
+
+        // Show the empty pan when the page loads.
+        drawPan();
+
+        // Draw a plate below the pan.
+        function drawPlate() {
+            // Draw the outer rim with stepped corners.
+            ctx.fillStyle = "#8b796b";
+            ctx.fillRect(105, 175, 90, 50);
+            ctx.fillRect(95, 185, 110, 30);
+
+            // Draw the lighter centre of the plate.
+            ctx.fillStyle = "#b8aa98";
+            ctx.fillRect(110, 180, 80, 40);
+            ctx.fillRect(100, 190, 100, 20);
+        }
+
+        // Show the empty plate when the page loads.
+        drawPlate();
+
+        // Draw a whole egg beside the pan.
+        function drawRawEgg() {
+            // Stack rectangles to create an egg-shaped shell.
+            ctx.fillStyle = "#c99563";
+            ctx.fillRect(226, 133, 12, 4);
+            ctx.fillRect(222, 137, 20, 8);
+            ctx.fillRect(218, 145, 28, 16);
+            ctx.fillRect(222, 161, 20, 4);
+            ctx.fillRect(226, 165, 12, 4);
+
+            // Add a small highlight on the shell.
+            ctx.fillStyle = "#e6bc91";
+            ctx.fillRect(225, 141, 4, 10);
+        }
+
+        // Show the whole egg when the game starts.
+        drawRawEgg();
+
+        // Clear the area where the whole egg is drawn.
+        function hideRawEgg() {
+            ctx.clearRect(216, 131, 32, 40);
+        }
+
+        // Draw an egg at a chosen position.
+        // The defaults keep it in its original position in the pan.
+        function drawEgg(whiteColor = "#ddd8bd", x = 125, y = 100) {
+            // Draw the egg white using offsets from x and y.
+            ctx.fillStyle = whiteColor;
+            ctx.fillRect(x + 5, y, 40, 30);
+            ctx.fillRect(x, y + 5, 50, 20);
+
+            // Draw the yolk.
+            ctx.fillStyle = "#f3bd38";
+            ctx.fillRect(x + 15, y + 7, 20, 16);
+
+            // Add a highlight.
+            ctx.fillStyle = "#ffe28a";
+            ctx.fillRect(x + 18, y + 9, 6, 4);
+        }
+
+        // Find the button on the page.
+        const crackButton = document.getElementById("crack-egg");
+
+        // Find the paragraph where we show cooking updates.
+        const statusText = document.getElementById("status");
+
+        // Find the Serve egg button.
+        const serveButton = document.getElementById("serve-egg");
+
+        // Redraw the egg with a brighter white when it is cooked and update message
+        function finishCooking() {
+            drawEgg("#fff5dc");
+            statusText.textContent = "Your egg is ready!";
+            // Allow the player to serve the cooked egg.
+            serveButton.disabled = false;
+        }
+
+        // Track whether the pan contains an egg.
+        let eggInPan = false;
+
+        // Handle clicking the Crack egg button.
+        function crackEgg() {
+            // Stop here if there is already an egg.
+            if (eggInPan) {
+                return;
+            }
+
+            // Remember that the pan now contains an egg.
+            eggInPan = true;
+
+            // Redraw the empty plate to cover the previously served egg.
+            drawPlate();
+
+            // Remove the whole egg before drawing the cracked egg in the pan.
+            hideRawEgg();
+
+            // Draw the egg and disable the button.
+            drawEgg();
+            crackButton.disabled = true;
+
+            // Tell the player that cooking has started.
+            statusText.textContent = "Cooking...";
+
+            // Cook for 3 seconds.
+            // Show 3 immediately, then count down once per second.
+            let secondsLeft = 3;
+            drawCountdown(secondsLeft);
+
+            // Run every 1 second
+            const countdownTimer = setInterval(() => {
+                secondsLeft--;
+
+                if (secondsLeft > 0) {
+                    drawCountdown(secondsLeft);
+                } else {
+                    // Remove the timer and finish cooking.
+                    clearInterval(countdownTimer);
+                    ctx.clearRect(135, 35, 50, 35);
+                    finishCooking();
+                }
+            }, 1000);
+        }
+
+        // Run crackEgg when the player clicks.
+        crackButton.addEventListener("click", crackEgg);
+
+        // Move the cooked egg from the pan to the plate.
+        function serveEgg() {
+            // Redraw the pan to cover the egg inside it.
+            drawPan();
+
+            // Refresh the plate, then draw the cooked egg on top.
+            drawPlate();
+            drawEgg("#fff5dc", 125, 185);
+
+            // Put a new whole egg beside the pan for the next round.
+            drawRawEgg();
+
+            // Prepare the controls for another egg.
+            eggInPan = false;
+            crackButton.disabled = false;
+            serveButton.disabled = true;
+
+            // Show the result.
+            statusText.textContent = "Breakfast served! Cook another?";
+        }
+
+        // Serve the egg when the player clicks.
+        serveButton.addEventListener("click", serveEgg);
+      </script>
+  </body>
+</html>
